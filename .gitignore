@@ -1,4 +1,5 @@
 /tmp/
+/test_bins/
 /DefaultBuild/*
 !/DefaultBuild/RL78_F24_Boot_loader_CAN_FD_app_update.bin
 *.mtud
