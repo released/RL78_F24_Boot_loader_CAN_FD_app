@@ -19,8 +19,8 @@
  * Device_CanRxIsr captures frames into the main-loop RAM queue.
  * Keep a backslash on every entry except the last when extending the list.
  */
-#define APP_IRQ_HANDLERS(X) \
-    X(0x2E, Device_TimerIsr) \
+#define APP_IRQ_HANDLERS(X)                                                                        \
+    X(0x2E, Device_TimerIsr)                                                                       \
     X(0x4C, Device_CanRxIsr)
 
 #endif

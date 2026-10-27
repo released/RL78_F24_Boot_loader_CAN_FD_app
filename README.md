@@ -46,29 +46,6 @@ Pre-build generates metadata/vectors; post-build validates actual linked bytes a
 App code starts0x2200,table0x2000,metadata0x2100..0x21FF.
 Capacity is0x3DC00; final1KiB is protected.
 
-## FF-filled App test images
-
-After a successful App build, double-click `generate_test_bins.bat`, or run
-`powershell -NoProfile -ExecutionPolicy Bypass -File .\generate_test_bins.ps1`
-from this App directory. The matching sibling Boot supplies
-`tools/app_config.ps1`; no Python, SRecord or MCU compiler invocation
-is needed.
-
-The script reads the packaged `DefaultBuild/*_update.bin` and creates a new
-`test_bins/<batch>/` with test BINs, `manifest.csv` and `skipped.csv`.
-Default Flash budgets are 16/32/64/128/256/512 KiB, including Boot; the actual
-BIN subtracts the Boot reserve and respects metadata capacity. With the current
-App, lengths are 8/24/56/120/247 KiB; the last 1 KiB remains protected. An App
-that no longer fits a budget is skipped rather than truncated. One KiB is 1024 bytes.
-
-App code and vectors remain unchanged. FF padding starts at the original CRC
-location; metadata image_size at BIN `0x118..0x11B` is updated, and the new final
-four bytes contain little-endian CRC32. Version/build/policy remain unchanged.
-The original BIN is never overwritten. Test outputs are ignored by Git and
-can be regenerated after each App build; both generator scripts are shared.
-Use the existing Tool CAN FD Upgrade workflow and keep its JSON operation report.
-See the [test-image guide](https://released.github.io/slide_boot_loader_for_RL78/#device-test-images).
-
 ## Artifacts and operation
 
 | Artifact | Purpose |
@@ -91,3 +68,25 @@ increases during the checked update. Sustained stress and power/fault recovery
 require separate evidence.
 Receive configuration,queue limits and Flash/IRQ ownership are described in
 the [FD engineering guide](https://released.github.io/slide_boot_loader_for_RL78/#can-fd-device-rx).
+
+## App timing test images
+
+A successful App build also produces FF-filled test BINs under `test_bins/auto/`.
+Open `test_bins/auto/index.html` to select an image by actual size, CRC and hash.
+The set includes supported Flash-budget tiers and the declared App capacity;
+tiers smaller than the executable or larger than physical Flash are skipped.
+The packaged `DefaultBuild/*_update.bin`, code, IRQ tables and release settings
+remain unchanged. Only test-image length, FF padding and final CRC are updated.
+Automatic rebuilds refresh this one owned set; changed or unknown files stop
+replacement. Manual `generate_test_bins.bat` creates a separate batch.
+Use the matching ISP workflow and keep its JSON/HTML operation report for timing.
+See the [test-image guide](https://released.github.io/slide_boot_loader_for_RL78/#device-test-images).
+
+## User code entry
+
+`custom_func.c` provides `hardware_init()` for initialization and `loop()` for
+foreground service. Add application initialization and foreground work through
+these callbacks, retaining the existing communication service calls.
+The selected main/startup adapter owns entry and handoff. Generated peripheral
+files remain under `src/`; retain the project's MTPJ source selection when using
+Code Generator or Smart Configurator, then rebuild to validate the image and vectors.
