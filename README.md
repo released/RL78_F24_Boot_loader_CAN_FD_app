@@ -1,7 +1,7 @@
 # RL78/F24 MCU CAN FD device App
 
-Independent App paired with sibling `RL78_F24_Boot_loader_CAN_FD`.
-The App uses its sibling's board/CAN/clock/metadata sources and its own SC output.
+App firmware for a compatible `RL78_F24_Boot_loader_CAN_FD` Boot.
+The App owns its board/CAN/clock/metadata sources and SC output.
 
 ## Runtime
 
@@ -21,24 +21,14 @@ Change the observation tag in `app_runtime_log.h`; image release identity remain
 Edit `app_image_config.h` for release identity/version policy and `app_irq_handlers.h` for App-local ISR mappings.
 Use global,no-vect interrupt handlers; Boot and App are separately linked images.
 Generated `ftable.inc`,`app_identity.h`,`app_irq_table.inc` and ASM are not manual inputs.
-Shared engineering contracts are in the sibling Boot headers.
+Engineering contracts are local configuration headers.
 
-The required sibling layout is:
-
-```text
-workspace/
-  RL78_F24_Boot_loader_CAN_FD/       # shared sources and build helpers
-  RL78_F24_Boot_loader_CAN_FD_app/   # App-local image/IRQ settings
-```
-
-Keep these directory names when relocating checkouts. The App project alone
-does not include its required Boot-owned common sources and PowerShell helpers.
+The App builds using its own source tree and PowerShell helpers.
 
 From the Boot directory:
 
 ```powershell
-.\build.ps1 -Kind app
-.\test.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .uild.ps1
 ```
 
 Use CS+ CC-RL with Windows PowerShell5.1/.NET.
@@ -59,7 +49,7 @@ Capacity is0x3DC00; final1KiB is protected.
 Install Boot first using the programmer.
 Tool uses a verified host with FD burst capability bit13,CAN FD /500K /2M,Discover,Enter Boot as applicable and the update BIN.
 The App/Boot metadata requires FD mode; Classical update images are rejected.
-See [CAN FD operation](https://released.github.io/slide_isp_tool_for_RL78/#can-fd-update) and
+See [CAN FD operation](https://released.github.io/slide_simple_renesas_isp_tool/#can-fd-update) and
 [metadata/vector editing](https://released.github.io/slide_boot_loader_for_RL78/#device-metadata-vector-workshop).
 Clean-build/model results do not establish physical FD update acceptance.
 Normal500K/2M/BRS App->ENTER->update->APP_READY operation has also been verified
@@ -90,3 +80,36 @@ these callbacks, retaining the existing communication service calls.
 The selected main/startup adapter owns entry and handoff. Generated peripheral
 files remain under `src/`; retain the project's MTPJ source selection when using
 Code Generator or Smart Configurator, then rebuild to validate the image and vectors.
+
+## Project layout and standalone build
+
+This project includes its own source files, configuration headers and build tools.
+A sibling Boot, App or Transfer checkout is not required to compile it.
+Keep the project directory name aligned with its `.mtpj` filename; remove a ZIP download suffix when necessary.
+Build with CS+ Rebuild, or run the local PowerShell entry:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
+```
+
+| Location | Responsibility |
+| --- | --- |
+| `custom_func.c` | Project initialization in `hardware_init()` and recurring work in `loop()`; runtime orchestration stays here |
+| `hal/can` | CAN service, controller driver and CAN adapter, when used by this project |
+| `hal/device` | Device, clock, peripheral and CPU handoff APIs |
+| `hal/image` | Metadata parser/profile, image validation and software CRC |
+| `hal/flash` | Flash access/geometry APIs, when required by the selected image |
+| `hal/isp` | Update/Transfer protocol and transport processing APIs |
+| Root configuration headers | Local MCU/Flash, handoff and communication contract |
+| `tools` and root PowerShell helpers | Local metadata/IRQ generation and linked-image checks |
+| `src` | Code Generator or Smart Configurator peripheral sources |
+
+Only the sources registered in this project's CS+ configuration are linked.
+Generated main/vector implementations must not become a second active entry.
+Retain the `custom_func.c` callbacks and the selected startup adapter after code generation.
+
+Boot and App each carry a local contract. Keep their MCU, Flash layout, image format,
+IRQ ABI, handoff and communication settings compatible when installing a pair.
+App releases are edited in `app_image_config.h` and `app_irq_handlers.h` in the App project.
+Rebuild the selected App to regenerate its metadata, vector table, update BIN and timing BINs.
+The App build does not read or rewrite a Boot checkout.
